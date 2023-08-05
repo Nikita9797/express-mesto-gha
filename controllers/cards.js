@@ -38,11 +38,14 @@ const deleteCardById = (req, res) => {
 
   return CardModel.findByIdAndRemove(cardId)
     .then((card) => {
+      if (!card) {
+        return res.status(404).send({ message: "Card not found" });
+      }
       return res.status(200).send(card);
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(404).send({ message: "Card not found" });
+        return res.status(400).send({ message: "Incorrect data" });
       }
       res.status(500).send("Server Error");
     });
