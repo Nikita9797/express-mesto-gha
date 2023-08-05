@@ -13,11 +13,15 @@ const getUserById = (req, res) => {
 
   return UserModel.findById(userId)
     .then((user) => {
+      console.log(user);
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
+      }
       return res.status(200).send(user);
     })
     .catch((err) => {
       if (err.name === "CastError") {
-        return res.status(404).send({ message: "User not found" });
+        return res.status(400).send({ message: "Incorrect data" });
       }
       res.status(500).send("Server Error");
     });
