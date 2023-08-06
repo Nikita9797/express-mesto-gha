@@ -1,7 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = require("./routes");
-const bodyParser = require("body-parser");
 
 const { PORT = 3000 } = process.env;
 const MONGODB_URL = "mongodb://127.0.0.1:27017/mestodb";
@@ -20,7 +19,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.use(router);
 

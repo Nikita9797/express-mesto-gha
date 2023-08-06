@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "lint": "npx eslint"
+    "lint": "npx eslint ."
   },
   "keywords": [],
-  "author": "",
+  "author": "Karpov Nikita",
   "license": "ISC",
   "devDependencies": {
     "eslint": "^8.46.0",
