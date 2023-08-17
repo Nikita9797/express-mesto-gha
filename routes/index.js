@@ -2,13 +2,12 @@ const httpConstants = require("http2").constants;
 const router = require("express").Router();
 const usersRouter = require("./users");
 const cardsRouter = require("./cards");
+const NotFoundError = require("../errors/NotFoundError");
 
 router.use("/users", usersRouter);
 router.use("/cards", cardsRouter);
-router.use("*", (req, res) => {
-  res
-    .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-    .send({ message: "Invalid request address" });
+router.use("/", (req, res, next) => {
+  next(new NotFoundError("Invalid request address"));
 });
 
 module.exports = router;

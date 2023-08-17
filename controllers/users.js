@@ -1,12 +1,18 @@
 const httpConstants = require("http2").constants;
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const UserModel = require("../models/user");
+const ServerError = require("../errors/ServerError");
+const NotFoundError = require("../errors/NotFoundError");
+const ValidationError = require("../errors/ValidationError");
+const ConflictError = require("../errors/ConflictError");
 
-const getUsers = (req, res) => UserModel.find()
+const getUsers = (req, res, next) => UserModel.find()
   .then((users) => res.status(httpConstants.HTTP_STATUS_OK).send(users))
-  .catch(() => res.status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR).send("Server Error"));
+  .catch(() => next(new ServerError("Server Error")));
 
-const getUserById = (req, res) => {
+const getUserById = (req, res, next) => {
   const { userId } = req.params;
 
   return UserModel.findById(userId)
@@ -14,65 +20,107 @@ const getUserById = (req, res) => {
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send(user))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "User not found" });
+        next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: "Incorrect data" });
+        next(new ValidationError("Incorrect data"));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"));
     });
 };
 
-const createUser = (req, res) => UserModel.create({ ...req.body })
-  .then((user) => res.status(httpConstants.HTTP_STATUS_CREATED).send(user))
+const getCurrentUserInfo = (req, res, next) => UserModel.findById(req.user._id)
+  .orFail()
+  .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send(user))
   .catch((err) => {
-    if (err instanceof mongoose.Error.ValidationError) {
-      return res.status(httpConstants.HTTP_STATUS_BAD_REQUEST).send({
-        message: `${Object.values(err.errors)
-          .map(() => err.message)
-          .join(", ")}`,
-      });
+    if (err instanceof mongoose.Error.DocumentNotFoundError) {
+      next(new NotFoundError("User not found"));
     }
-    return res
-      .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-      .send("Server Error");
+    next(new ServerError("Server Error"));
   });
 
-const updateProfile = (req, res) => {
+const createUser = (req, res, next) => {
+  const {
+    name,
+    about,
+    avatar,
+    email,
+  } = req.body;
+  bcrypt.hash(req.body.password, 10)
+    .then((hash) => UserModel.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
+    .then(() => res.status(httpConstants.HTTP_STATUS_CREATED).send({
+      name,
+      about,
+      avatar,
+      email,
+    }))
+    .catch((err) => {
+      console.log(err);
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new ValidationError({
+          message: `${Object.values(err.errors)
+            .map(() => err.message)
+            .join(", ")}`,
+        }));
+      }
+      if (err.code === 11000) {
+        next(new ConflictError("Данный email уже занят"));
+      }
+      next(new ServerError("Server Error"));
+    });
+};
+
+const login = (req, res) => {
+  const { email, password } = req.body;
+
+  return UserModel.findOne({ email }).select("+password")
+    .then((user) => {
+      if (!user) {
+        return res.status(403).send("Не верный email или пароль");
+      }
+      bcrypt.compare(password, user.password, (err, password) => {
+        if (!password) {
+          return res.status(403).send("Не верный email или пароль");
+        }
+
+        const token = jwt.sign({ _id: user._id }, "some-secret-key");
+        return res.status(httpConstants.HTTP_STATUS_OK).send({ token });
+      });
+    })
+    .catch((err) => res.status(401).send({ message: err.message }));
+};
+
+const updateProfile = (req, res, next) => {
   const { name, about } = req.body;
   return UserModel.findByIdAndUpdate(
     req.user._id,
     { name, about },
     { new: true, runValidators: true },
   )
-    .orFail(new mongoose.Error.DocumentNotFoundError())
+    .orFail()
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send({ user }))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "User not found" });
+        next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(httpConstants.HTTP_STATUS_BAD_REQUEST).send({
+        next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
-        });
+        }));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"))
     });
 };
 
-const updateAvatar = (req, res) => {
+const updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
   return UserModel.findByIdAndUpdate(
     req.user._id,
@@ -83,27 +131,25 @@ const updateAvatar = (req, res) => {
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send({ user }))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "User not found" });
+        next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(httpConstants.HTTP_STATUS_BAD_REQUEST).send({
+        next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
-        });
+        }));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"))
     });
 };
 
 module.exports = {
   getUsers,
   getUserById,
+  getCurrentUserInfo,
   createUser,
   updateProfile,
   updateAvatar,
+  login,
 };

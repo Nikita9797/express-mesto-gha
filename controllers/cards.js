@@ -1,55 +1,57 @@
 const httpConstants = require("http2").constants;
 const mongoose = require("mongoose");
 const CardModel = require("../models/card");
+const NotFoundError = require("../errors/NotFoundError");
+const ValidationError = require("../errors/ValidationError");
+const ServerError = require("../errors/ServerError");
 
-const getCards = (req, res) => {
+const getCards = (req, res, next) => {
   CardModel.find()
     .then((cards) => res.status(httpConstants.HTTP_STATUS_OK).send(cards))
-    .catch(() => res.status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR).send("Server Error"));
+    .catch(() => next(new ServerError("Server Error")));
 };
 
-const createCard = (req, res) => {
+const createCard = (req, res, next) => {
   const ownerId = req.user._id;
   return CardModel.create({ ...req.body, owner: ownerId })
     .then((card) => res.status(httpConstants.HTTP_STATUS_CREATED).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(httpConstants.HTTP_STATUS_BAD_REQUEST).send({
+        next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
-        });
+        }));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"))
     });
 };
 
-const deleteCardById = (req, res) => {
+const deleteCardById = (req, res, next) => {
   const { cardId } = req.params;
 
-  return CardModel.findByIdAndRemove(cardId)
-    .orFail(new mongoose.Error.DocumentNotFoundError())
-    .then((card) => res.status(httpConstants.HTTP_STATUS_OK).send(card))
+  return CardModel.findById(cardId)
+    .orFail()
+    .then((card) => {
+      if (card.owner.toString() === req.user._id) {
+        return CardModel.findByIdAndRemove(cardId)
+          .then((deletedCard) => res.status(httpConstants.HTTP_STATUS_OK).send(deletedCard))
+          .catch(() => next(new ServerError("Server Error")));
+      }
+      return res.status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR).send("Нельзя удалять чужую карточку");
+    })
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "Card not found" });
+        next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: "Incorrect data" });
+        next(new ValidationError("Incorrect data"));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"));
     });
 };
 
-const addLike = (req, res) => {
+const addLike = (req, res, next) => {
   const { cardId } = req.params;
   return CardModel.findByIdAndUpdate(
     cardId,
@@ -60,22 +62,16 @@ const addLike = (req, res) => {
     .then((card) => res.status(httpConstants.HTTP_STATUS_OK).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "Card not found" });
+        next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: "Incorrect data" });
+        next(new ValidationError("Incorrect data"));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"));
     });
 };
 
-const deleteLike = (req, res) => {
+const deleteLike = (req, res, next) => {
   const { cardId } = req.params;
 
   return CardModel.findByIdAndUpdate(
@@ -87,18 +83,12 @@ const deleteLike = (req, res) => {
     .then((card) => res.status(httpConstants.HTTP_STATUS_OK).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: "Card not found" });
+        next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: "Incorrect data" });
+        next(new ValidationError("Incorrect data"));
       }
-      return res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send("Server Error");
+      next(new ServerError("Server Error"));
     });
 };
 
