@@ -7,10 +7,11 @@ const ServerError = require("../errors/ServerError");
 const NotFoundError = require("../errors/NotFoundError");
 const ValidationError = require("../errors/ValidationError");
 const ConflictError = require("../errors/ConflictError");
+const UnauthorizedError = require("../errors/UnauthorizedError");
 
 const getUsers = (req, res, next) => UserModel.find()
   .then((users) => res.status(httpConstants.HTTP_STATUS_OK).send(users))
-  .catch(() => next(new ServerError("Server Error")));
+  .catch(() => next(new UnauthorizedError("Server Error")));
 
 const getUserById = (req, res, next) => {
   const { userId } = req.params;
@@ -63,11 +64,7 @@ const createUser = (req, res, next) => {
     .catch((err) => {
       console.log(err);
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError({
-          message: `${Object.values(err.errors)
-            .map(() => err.message)
-            .join(", ")}`,
-        }));
+        next(new ValidationError(err.message));
       }
       if (err.code === 11000) {
         next(new ConflictError("Данный email уже занят"));
