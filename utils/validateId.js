@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
+const { ObjectId } = require("mongoose").Types.ObjectId;
 
 function validateId(value) {
-  const isValid = mongoose.isValidObjectId(value);
+  const isValid = ObjectId.isValid(value);
 
   if (isValid) return value;
 
