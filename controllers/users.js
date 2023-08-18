@@ -47,6 +47,10 @@ const createUser = (req, res, next) => {
     avatar,
     email,
   } = req.body;
+
+  if (!req.body.password) {
+    next(new ValidationError("Пароль отсутствует"));
+  }
   bcrypt.hash(req.body.password, 10)
     .then((hash) => UserModel.create({
       name,
@@ -62,7 +66,6 @@ const createUser = (req, res, next) => {
       email,
     }))
     .catch((err) => {
-      console.log(err);
       if (err instanceof mongoose.Error.ValidationError) {
         next(new ValidationError(err.message));
       }
@@ -76,21 +79,15 @@ const createUser = (req, res, next) => {
 const login = (req, res) => {
   const { email, password } = req.body;
 
-  return UserModel.findOne({ email }).select("+password")
+  return UserModel.findUserByCredentials(email, password)
     .then((user) => {
-      if (!user) {
-        return res.status(403).send("Не верный email или пароль");
-      }
-      bcrypt.compare(password, user.password, (err, password) => {
-        if (!password) {
-          return res.status(403).send("Не верный email или пароль");
-        }
-
-        const token = jwt.sign({ _id: user._id }, "some-secret-key");
-        return res.status(httpConstants.HTTP_STATUS_OK).send({ token });
+      res.send({
+        token: jwt.sign({ _id: user._id }, "some-secret-key"),
       });
     })
-    .catch((err) => res.status(401).send({ message: err.message }));
+    .catch((err) => {
+      res.status(401).send({ message: err.message });
+    });
 };
 
 const updateProfile = (req, res, next) => {
