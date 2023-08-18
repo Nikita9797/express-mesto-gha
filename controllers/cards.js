@@ -23,7 +23,7 @@ const createCard = (req, res, next) => {
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"))
+      next(new ServerError("Server Error"));
     });
 };
 

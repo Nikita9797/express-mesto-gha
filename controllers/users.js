@@ -76,8 +76,9 @@ const createUser = (req, res, next) => {
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   return UserModel.findUserByCredentials(email, password)
     .then((user) => {
@@ -86,6 +87,10 @@ const login = (req, res) => {
       });
     })
     .catch((err) => {
+      console.log(err);
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new ValidationError(err.message));
+      }
       res.status(401).send({ message: err.message });
     });
 };
