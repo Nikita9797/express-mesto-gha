@@ -78,16 +78,17 @@ const createUser = (req, res, next) => {
 
 const login = (req, res, next) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   return UserModel.findUserByCredentials(email, password)
     .then((user) => {
-      res.send({
-        token: jwt.sign({ _id: user._id }, "some-secret-key"),
-      });
+      const token = jwt.sign({ _id: user._id }, "some-secret-key");
+      res.cookie("jwt", token, {
+        httpOnly: true,
+        maxAge: 3600000 * 24 * 7,
+        sameSite: true,
+      }).send(token);
     })
     .catch((err) => {
-      console.log(err);
       if (err instanceof mongoose.Error.ValidationError) {
         next(new ValidationError(err.message));
       }
@@ -115,7 +116,7 @@ const updateProfile = (req, res, next) => {
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"))
+      next(new ServerError("Server Error"));
     });
 };
 
@@ -139,7 +140,7 @@ const updateAvatar = (req, res, next) => {
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"))
+      next(new ServerError("Server Error"));
     });
 };
 

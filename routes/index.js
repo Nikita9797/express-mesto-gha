@@ -1,4 +1,3 @@
-const httpConstants = require("http2").constants;
 const router = require("express").Router();
 const usersRouter = require("./users");
 const cardsRouter = require("./cards");
