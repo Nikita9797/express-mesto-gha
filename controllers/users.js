@@ -17,7 +17,7 @@ const getUserById = (req, res, next) => {
   const { userId } = req.params;
 
   return UserModel.findById(userId)
-    .orFail(new mongoose.Error.DocumentNotFoundError())
+    .orFail()
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send(user))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
@@ -85,7 +85,6 @@ const login = (req, res, next) => {
       res.cookie("jwt", token, {
         httpOnly: true,
         maxAge: 3600000 * 24 * 7,
-        sameSite: true,
       }).send(token);
     })
     .catch((err) => {
