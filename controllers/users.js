@@ -85,13 +85,13 @@ const login = (req, res, next) => {
       res.cookie("jwt", token, {
         httpOnly: true,
         maxAge: 3600000 * 24 * 7,
-      }).send(token);
+      }).send({ token });
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
         next(new ValidationError(err.message));
       }
-      res.status(401).send({ message: err.message });
+      next(new UnauthorizedError({ message: err.message }));
     });
 };
 

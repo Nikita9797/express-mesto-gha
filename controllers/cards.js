@@ -4,6 +4,7 @@ const CardModel = require("../models/card");
 const NotFoundError = require("../errors/NotFoundError");
 const ValidationError = require("../errors/ValidationError");
 const ServerError = require("../errors/ServerError");
+const ForbiddenError = require("../errors/ForbiddenError");
 
 const getCards = (req, res, next) => {
   CardModel.find()
@@ -38,7 +39,7 @@ const deleteCardById = (req, res, next) => {
           .then((deletedCard) => res.status(httpConstants.HTTP_STATUS_OK).send(deletedCard))
           .catch(() => next(new ServerError("Server Error")));
       }
-      return res.status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR).send("Нельзя удалять чужую карточку");
+      return next(new ForbiddenError("Нельзя удалять чужую карточку"));
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
