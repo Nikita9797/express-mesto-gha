@@ -13,7 +13,7 @@ router.get("/", getUsers);
 router.get("/me", getCurrentUserInfo);
 router.get("/:userId", celebrate({
   params: Joi.object().keys({
-    cardId: Joi.string().custom(validateId),
+    userId: Joi.string().custom(validateId),
   }),
 }), getUserById);
 router.patch("/me", celebrate({
