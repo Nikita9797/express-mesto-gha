@@ -18,13 +18,13 @@ const createCard = (req, res, next) => {
     .then((card) => res.status(httpConstants.HTTP_STATUS_CREATED).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError({
+        return next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -43,12 +43,12 @@ const deleteCardById = (req, res, next) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("Card not found"));
+        return next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        next(new ValidationError("Incorrect data"));
+        return next(new ValidationError("Incorrect data"));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -63,12 +63,12 @@ const addLike = (req, res, next) => {
     .then((card) => res.status(httpConstants.HTTP_STATUS_OK).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("Card not found"));
+        return next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        next(new ValidationError("Incorrect data"));
+        return next(new ValidationError("Incorrect data"));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -84,12 +84,12 @@ const deleteLike = (req, res, next) => {
     .then((card) => res.status(httpConstants.HTTP_STATUS_OK).send(card))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("Card not found"));
+        return next(new NotFoundError("Card not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        next(new ValidationError("Incorrect data"));
+        return next(new ValidationError("Incorrect data"));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 

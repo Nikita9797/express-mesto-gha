@@ -21,12 +21,12 @@ const getUserById = (req, res, next) => {
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send(user))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("User not found"));
+        return next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.CastError) {
-        next(new ValidationError("Incorrect data"));
+        return next(new ValidationError("Incorrect data"));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -35,9 +35,9 @@ const getCurrentUserInfo = (req, res, next) => UserModel.findById(req.user._id)
   .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send(user))
   .catch((err) => {
     if (err instanceof mongoose.Error.DocumentNotFoundError) {
-      next(new NotFoundError("User not found"));
+      return next(new NotFoundError("User not found"));
     }
-    next(new ServerError("Server Error"));
+    return next(new ServerError("Server Error"));
   });
 
 const createUser = (req, res, next) => {
@@ -49,9 +49,9 @@ const createUser = (req, res, next) => {
   } = req.body;
 
   if (!req.body.password) {
-    next(new ValidationError("Пароль отсутствует"));
+    return next(new ValidationError("Пароль отсутствует"));
   }
-  bcrypt.hash(req.body.password, 10)
+  return bcrypt.hash(req.body.password, 10)
     .then((hash) => UserModel.create({
       name,
       about,
@@ -67,12 +67,12 @@ const createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError(err.message));
+        return next(new ValidationError(err.message));
       }
       if (err.code === 11000) {
-        next(new ConflictError("Данный email уже занят"));
+        return next(new ConflictError("Данный email уже занят"));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -89,9 +89,9 @@ const login = (req, res, next) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError(err.message));
+        return next(new ValidationError(err.message));
       }
-      next(new UnauthorizedError({ message: err.message }));
+      return next(new UnauthorizedError({ message: err.message }));
     });
 };
 
@@ -106,16 +106,16 @@ const updateProfile = (req, res, next) => {
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send({ user }))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("User not found"));
+        return next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError({
+        return next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
@@ -130,16 +130,16 @@ const updateAvatar = (req, res, next) => {
     .then((user) => res.status(httpConstants.HTTP_STATUS_OK).send({ user }))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError("User not found"));
+        return next(new NotFoundError("User not found"));
       }
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new ValidationError({
+        return next(new ValidationError({
           message: `${Object.values(err.errors)
             .map(() => err.message)
             .join(", ")}`,
         }));
       }
-      next(new ServerError("Server Error"));
+      return next(new ServerError("Server Error"));
     });
 };
 
