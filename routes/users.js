@@ -2,6 +2,7 @@ const router = require("express").Router();
 const { celebrate, Joi } = require("celebrate");
 const { validateId } = require("../utils/validateId");
 const { regexUrl } = require("../utils/regexUrl");
+
 const {
   getUsers,
   getUserById,
